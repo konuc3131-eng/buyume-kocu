@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     const images = raw.map(toImageBlock);
 
     // Hak kontrolü, geçerli istekten sonra (hatalı istekler hak yemesin)
-    const lim = await checkLimit(clientIp(req));
+    const lim = await checkLimit(mode + ":" + clientIp(req));
     res.setHeader("X-Remaining", String(lim.remaining));
     if (!lim.ok) throw { status: 429, msg: `Bugünkü ${lim.limit} ücretsiz hakkın bitti. Yarın tekrar gel!` };
 
