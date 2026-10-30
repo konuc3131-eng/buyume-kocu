@@ -1,0 +1,17 @@
+{
+  "name": "buyume-kocu",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Ücretsiz Instagram büyüme koçu: hesap karnesi, rakip analizi, çekim kartı",
+  "scripts": {
+    "dev": "vercel dev",
+    "test": "node test/smoke.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@anthropic-ai/sdk": ">=0.50.0",
+    "@upstash/ratelimit": "^2.0.5",
+    "@upstash/redis": "^1.35.0"
+  }
+}
