@@ -1,0 +1,74 @@
+// POST /api/analyze
+// Gövde: { mode: "karne"|"rakip"|"cekim", images: ["data:image/jpeg;base64,..."], niche?, roast?, idea? }
+// Görseller sunucuda SAKLANMAZ: sadece Claude'a gönderilir ve unutulur.
+
+import Anthropic from "@anthropic-ai/sdk";
+import { buildPrompt, parseJSON } from "../lib/prompts.js";
+import { checkLimit } from "../lib/limit.js";
+
+const client = new Anthropic(); // ANTHROPIC_API_KEY ortam değişkeninden okunur
+
+// Görselli analizler daha güçlü modelle, düz metin çekim kartı hızlı ve ucuz modelle.
+const MODEL_VISION = process.env.MODEL_VISION || "claude-sonnet-5-5";
+const MODEL_FAST = process.env.MODEL_FAST || "claude-haiku-5-5";
+
+const NEED_IMAGES = { karne: 1, rakip: 2, cekim: 0 };
+const MAX_IMG_BYTES = 1_500_000; // tarayıcı zaten küçültüp gönderiyor
+const OK_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+function toImageBlock(dataUrl) {
+  const m = /^data:(image\/[a-z]+);base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ""));
+  if (!m || !OK_TYPES.includes(m[1])) throw { status: 400, msg: "Görsel biçimi desteklenmiyor. JPG veya PNG yükle." };
+  if (m[2].length * 0.75 > MAX_IMG_BYTES) throw { status: 413, msg: "Görsel çok büyük." };
+  return { type: "image", source: { type: "base64", media_type: m[1], data: m[2] } };
+}
+
+function clientIp(req) {
+  const xf = req.headers["x-forwarded-for"];
+  return (Array.isArray(xf) ? xf[0] : xf || "").split(",")[0].trim() || req.socket?.remoteAddress || "anon";
+}
+
+export default async function handler(req, res) {
+  res.setHeader("Cache-Control", "no-store");
+  if (req.method !== "POST") return res.status(405).json({ error: "Sadece POST." });
+
+  try {
+    const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
+    const { mode } = body;
+    if (!(mode in NEED_IMAGES)) throw { status: 400, msg: "Geçersiz mod." };
+
+    const raw = Array.isArray(body.images) ? body.images.slice(0, 2) : [];
+    if (raw.length < NEED_IMAGES[mode]) throw { status: 400, msg: mode === "rakip" ? "İki profil SS'i gerekli." : "Profil SS'i gerekli." };
+    if (mode === "cekim" && !String(body.idea || "").trim()) throw { status: 400, msg: "Ne çekeceğini yaz." };
+    const images = raw.map(toImageBlock);
+
+    // Hak kontrolü, geçerli istekten sonra (hatalı istekler hak yemesin)
+    const lim = await checkLimit(clientIp(req));
+    res.setHeader("X-Remaining", String(lim.remaining));
+    if (!lim.ok) throw { status: 429, msg: `Bugünkü ${lim.limit} ücretsiz hakkın bitti. Yarın tekrar gel!` };
+
+    const prompt = buildPrompt(mode, {
+      niche: body.niche, roast: !!body.roast, idea: body.idea, hasFrame: images.length > 0,
+    });
+
+    const msg = await client.messages.create({
+      model: images.length ? MODEL_VISION : MODEL_FAST,
+      max_tokens: 1500,
+      messages: [{ role: "user", content: [...images, { type: "text", text: prompt }] }],
+    });
+
+    const text = msg.content.filter(c => c.type === "text").map(c => c.text).join("");
+    let data;
+    try { data = parseJSON(text); }
+    catch { throw { status: 502, msg: "Cevap düzgün gelmedi, tekrar dene." }; }
+
+    return res.status(200).json({ data, remaining: lim.remaining });
+  } catch (e) {
+    if (e?.status && e?.msg) return res.status(e.status).json({ error: e.msg });
+    console.error("analyze error:", e?.status, e?.message);
+    const busy = e?.status === 429 || e?.status === 529;
+    return res.status(busy ? 503 : 500).json({ error: busy ? "Şu an çok yoğunuz, birazdan tekrar dene." : "Bir şey ters gitti, tekrar dene." });
+  }
+}
+
+export const config = { maxDuration: 60 };
