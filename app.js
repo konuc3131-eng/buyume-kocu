@@ -92,7 +92,7 @@ function renderKarne(d, isSample){
       ${d.roast ? `<p class="roast">${esc(d.roast)}</p>` : ""}
       ${isSample ? "" : `<button class="share" id="share">Karnemi paylaş</button>`}
     </div>
-    ${score < 75 ? `<div class="cta"><div><b>Bu karneyi ${clamp(d.potential||score+20,100)}'e biz çıkaralım</b><span>Bio, grid ve öne çıkanlar 7 günde hazır · Ender.psd</span></div><code>enderpsd.com.tr</code></div>` : ""}
+    ${score < 85 ? `<a class="cta" href="https://ig.me/m/ender.psd" target="_blank" rel="noopener"><div><b>Profil Makyajı: karneni ${clamp(d.potential||score+20,100)}+ yapalım</b><span>Bio, öne çıkan kapakları ve grid şablonu · Ender.psd</span></div><code>DM'den "KARNE" yaz →</code></a>` : ""}
     <div class="card"><div class="lbl">Alan alan · dokun, öneriyi gör</div><div class="areas">${areas}</div></div>
     <div class="card"><div class="lbl">Yeni bio önerileri</div><ul class="list">${bios}</ul></div>
     <div class="card"><div class="lbl">İçerik fikirleri · en yüksek puan üstte</div><ul class="list" data-all="100" data-badge="5 fikrin hepsini çektin!">${ideas}</ul></div>`;
