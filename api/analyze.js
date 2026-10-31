@@ -63,7 +63,7 @@ function parseJSON(text) {
 
 // ---------- Gemini ----------
 const KEY = process.env.GEMINI_API_KEY;
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
 const NEED_IMAGES = { karne: 1, rakip: 2, cekim: 0 };
 const MAX_IMG_BYTES = 1_500_000;
@@ -87,7 +87,7 @@ async function askGemini(parts) {
     headers: { "Content-Type": "application/json", "x-goog-api-key": KEY },
     body: JSON.stringify({
       contents: [{ role: "user", parts }],
-      generationConfig: { responseMimeType: "application/json", maxOutputTokens: 4096, thinkingConfig: { thinkingLevel: "low" } },
+      generationConfig: { responseMimeType: "application/json", maxOutputTokens: 4096 },
     }),
   });
   if (r.status === 429) throw { status: 503, msg: "Şu an çok yoğunuz, bir dakika sonra tekrar dene." };
