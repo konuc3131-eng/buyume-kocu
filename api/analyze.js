@@ -87,7 +87,7 @@ async function askGemini(parts) {
     headers: { "Content-Type": "application/json", "x-goog-api-key": KEY },
     body: JSON.stringify({
       contents: [{ role: "user", parts }],
-      generationConfig: { responseMimeType: "application/json", maxOutputTokens: 2048, temperature: 0.7 },
+      generationConfig: { responseMimeType: "application/json", maxOutputTokens: 4096, thinkingConfig: { thinkingLevel: "low" } },
     }),
   });
   if (r.status === 429) throw { status: 503, msg: "Şu an çok yoğunuz, bir dakika sonra tekrar dene." };
@@ -133,4 +133,4 @@ export default async function handler(req, res) {
   }
 }
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 120 };
